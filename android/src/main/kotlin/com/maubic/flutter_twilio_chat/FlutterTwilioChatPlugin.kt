@@ -75,6 +75,7 @@ public class FlutterTwilioChatPlugin
     }
   }
 
+  // Flutter callbacks
   override fun onListen(arguments: Any?, events: EventSink) {
     this.eventSink = events
   }
@@ -88,14 +89,14 @@ public class FlutterTwilioChatPlugin
       result.success("Android ${android.os.Build.VERSION.RELEASE}")
     } else if (call.method == "initialize") {
       val token: String = call.argument<String>("token")!!
-      val region: String = call.argument<String>("region") ?: "gll"
+      //val region: String = call.argument<String>("region") ?: "de1"
       val properties: ChatClient.Properties = ChatClient.Properties.Builder()
+        // This errors out?
         //.setRegion(region)
         .createProperties()
       val plugin: FlutterTwilioChatPlugin = this
       println("Creating chat client")
-      println(token)
-      ChatClient.setLogLevel(android.util.Log.DEBUG);
+      //ChatClient.setLogLevel(android.util.Log.DEBUG);
       ChatClient.create(
         this.context!!,
         token,
@@ -116,6 +117,7 @@ public class FlutterTwilioChatPlugin
     } else if (call.method == "sendSimpleMessage") {
       val channelId: String = call.argument<String>("channelId")!!
       val messageText: String = call.argument<String>("messageText")!!
+      println("sendSimpleMessage")
 
       this.chatClient?.channels?.getChannel(
         channelId,
@@ -127,10 +129,47 @@ public class FlutterTwilioChatPlugin
               object: CallbackListener<Message>() {
                 override fun onSuccess(message: Message) {
                   println("Sent message")
+                  channel.dispose()
                   result.success(null)
+                }
+                override fun onError(errorInfo: ErrorInfo) {
+                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                  channel.dispose()
+                  result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
                 }
               }
             )
+          }
+          override fun onError(errorInfo: ErrorInfo) {
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
+          }
+        }
+      )
+    } else if (call.method == "markAsRead") {
+      val channelId: String = call.argument<String>("channelId")!!
+      this.chatClient?.channels?.getChannel(
+        channelId,
+        object: CallbackListener<Channel>() {
+          override fun onSuccess(channel: Channel) {
+            println("Recovered channel")
+            channel.getMessages().setAllMessagesConsumedWithResult(
+              object: CallbackListener<Long>() {
+                override fun onSuccess(index: Long) {
+                  channel.dispose()
+                  result.success(null)
+                }
+                override fun onError(errorInfo: ErrorInfo) {
+                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                  channel.dispose()
+                  result.error("MarkAsReadError", errorInfo.getMessage(), null)
+                }
+              }
+            )
+          }
+          override fun onError(errorInfo: ErrorInfo) {
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            result.error("MarkAsReadError", errorInfo.getMessage(), null)
           }
         }
       )
@@ -139,26 +178,65 @@ public class FlutterTwilioChatPlugin
     }
   }
 
-  override fun onChannelJoined(channel: Channel?) {}
-  override fun onChannelInvited(channel: Channel?) {}
-  override fun onChannelAdded(channel: Channel?) {}
-  override fun onChannelUpdated(channel: Channel?, reason: Channel.UpdateReason?) {}
-  override fun onChannelDeleted(channel: Channel?) {}
-  override fun onChannelSynchronizationChange(channel: Channel?) {}
-  override fun onError(errorInfo: ErrorInfo?) {}
-  override fun onClientSynchronization(status: ChatClient.SynchronizationStatus?) {}
-  override fun onConnectionStateChange(state: ChatClient.ConnectionState?) {}
-  override fun onTokenExpired() {}
-  override fun onTokenAboutToExpire() {}
-  override fun onUserUpdated(user: User?, reason: User.UpdateReason?) {}
-  override fun onUserSubscribed(user: User?) {}
-  override fun onUserUnsubscribed(user: User?) {}
+  // Twilio callbacks
+  override fun onChannelJoined(channel: Channel?) {
+    println("onChannelJoined")
+  }
+  override fun onChannelInvited(channel: Channel?) {
+    println("onChannelInvited")
+  }
+  override fun onChannelAdded(channel: Channel?) {
+    println("onChannelAdded")
+  }
+  override fun onChannelUpdated(channel: Channel?, reason: Channel.UpdateReason?) {
+    println("onChannelUpdated")
+  }
+  override fun onChannelDeleted(channel: Channel?) {
+    println("onChannelDeleted")
+  }
+  override fun onChannelSynchronizationChange(channel: Channel?) {
+    println("onChannelSynchronizationChange")
+  }
+  override fun onError(errorInfo: ErrorInfo?) {
+    println("onError")
+  }
+  override fun onClientSynchronization(status: ChatClient.SynchronizationStatus?) {
+    println("onClientSynchronization")
+  }
+  override fun onConnectionStateChange(state: ChatClient.ConnectionState?) {
+    println("onConnectionStateChange")
+  }
+  override fun onTokenExpired() {
+    println("onTokenExpired")
+  }
+  override fun onTokenAboutToExpire() {
+    println("onTokenAboutToExpire")
+  }
+  override fun onUserUpdated(user: User?, reason: User.UpdateReason?) {
+    println("onUserUpdated")
+  }
+  override fun onUserSubscribed(user: User?) {
+    println("onUserSubscribed")
+  }
+  override fun onUserUnsubscribed(user: User?) {
+    println("onUserUnsubscribed")
+  }
   override fun onNewMessageNotification(channelSid: String?, messageSid: String?, messageIndex: Long) {
     println("onNewMessageNotification")
   }
-  override fun onAddedToChannelNotification(channelSid: String?) {}
-  override fun onInvitedToChannelNotification(channelSid: String?) {}
-  override fun onRemovedFromChannelNotification(channelSid: String?) {}
-  override fun onNotificationSubscribed() {}
-  override fun onNotificationFailed(errorInfo: ErrorInfo?) {}
+  override fun onAddedToChannelNotification(channelSid: String?) {
+    println("onAddedToChannelNotification")
+  }
+  override fun onInvitedToChannelNotification(channelSid: String?) {
+    println("onInvitedToChannelNotification")
+  }
+  override fun onRemovedFromChannelNotification(channelSid: String?) {
+    println("onRemovedFromChannelNotification")
+  }
+  override fun onNotificationSubscribed() {
+    println("onNotificationSubscribed")
+  }
+  override fun onNotificationFailed(errorInfo: ErrorInfo?) {
+    println("onNotificationFailed")
+  }
 }

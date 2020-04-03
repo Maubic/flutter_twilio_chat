@@ -21,7 +21,7 @@ class FlutterTwilioChat {
     });
   }
 
-  Future<void> sendSimpleMessage({
+  static Future<void> sendSimpleMessage({
     @required String channelId,
     @required String messageText,
   }) async {
@@ -29,6 +29,18 @@ class FlutterTwilioChat {
       await _methodChannel.invokeMethod('sendSimpleMessage', {
         'channelId': channelId,
         'messageText': messageText,
+      });
+    } catch (err) {
+      print('Error: $err');
+    }
+  }
+
+  static Future<void> markAsRead({
+    @required String channelId,
+  }) async {
+    try {
+      await _methodChannel.invokeMethod('markAsRead', {
+        'channelId': channelId,
       });
     } catch (err) {
       print('Error: $err');
