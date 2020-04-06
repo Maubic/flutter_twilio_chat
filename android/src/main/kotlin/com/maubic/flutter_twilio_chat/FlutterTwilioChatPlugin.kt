@@ -1,7 +1,7 @@
 package com.maubic.flutter_twilio_chat
 
 import androidx.annotation.NonNull;
-import android.content.Context;
+import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -17,9 +17,15 @@ import com.twilio.chat.ChatClient
 import com.twilio.chat.ChatClient.Properties
 import com.twilio.chat.ChatClientListener
 import com.twilio.chat.Channel
+import com.twilio.chat.ChannelDescriptor
 import com.twilio.chat.User
 import com.twilio.chat.Message
 import com.twilio.chat.ErrorInfo
+import com.twilio.chat.Paginator
+import com.twilio.chat.Attributes
+import com.maubic.flutter_twilio_chat.fromJson
+import com.maubic.flutter_twilio_chat.toMap
+import com.maubic.flutter_twilio_chat.toList
 
 /** FlutterTwilioChatPlugin */
 public class FlutterTwilioChatPlugin
@@ -106,7 +112,29 @@ public class FlutterTwilioChatPlugin
             println("Success")
             client.setListener(plugin)
             plugin.chatClient = client
-            result.success(null)
+
+            client.getChannels().getUserChannelsList(object: CallbackListener<Paginator<ChannelDescriptor>>() {
+              override fun onSuccess(paginator: Paginator<ChannelDescriptor>) {
+                paginator.getAll(
+                  { channels: List<ChannelDescriptor> ->
+                    val channelData: List<Map<String, Any>> = channels.map(::serializeChannel)
+                    result.success(mapOf(
+                      "channels" to channelData
+                    ))
+                  },
+                  { errorInfo: ErrorInfo ->
+                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("ChatClientCreateError", errorInfo.getMessage(), null)
+                  }
+                )
+              }
+              override fun onError(errorInfo: ErrorInfo) {
+                println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                result.error("ChatClientCreateError", errorInfo.getMessage(), null)
+              }
+            })
+
+            //result.success(null)
           }
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -239,4 +267,48 @@ public class FlutterTwilioChatPlugin
   override fun onNotificationFailed(errorInfo: ErrorInfo?) {
     println("onNotificationFailed")
   }
+}
+
+// Helper functions
+fun <T> Paginator<T>.getAll(
+  onSuccess: (items: List<T>) -> Unit,
+  onError: (error: ErrorInfo) -> Unit
+) {
+  this.getAllPlus(listOf(), onSuccess, onError)
+}
+
+fun <T> Paginator<T>.getAllPlus(
+  items: List<T>,
+  onSuccess: (items: List<T>) -> Unit,
+  onError: (error: ErrorInfo) -> Unit
+) {
+  val paginatorItems = this.getItems()
+  if (this.hasNextPage()) {
+    this.requestNextPage(object: CallbackListener<Paginator<T>>() {
+      override fun onSuccess (res: Paginator<T>) {
+        val addedItems: List<T> = items.plus(paginatorItems)
+        res.getAllPlus(addedItems, onSuccess, onError)
+      }
+      override fun onError (err: ErrorInfo) {
+        onError(err)
+      }
+    })
+  } else {
+    onSuccess(items.plus(paginatorItems))
+  }
+}
+
+fun serializeChannel(channel: ChannelDescriptor): Map<String, Any> {
+  return mapOf(
+    "sid" to channel.getSid(),
+    "uniqueName" to channel.getUniqueName(),
+    "friendlyName" to channel.getFriendlyName(),
+    "attributes" to serializeAttributes(channel.getAttributes()),
+    "createdBy" to channel.getCreatedBy(),
+    "unconsumedCount" to channel.getUnconsumedMessagesCount()
+  )
+}
+
+fun serializeAttributes(attributes: Attributes): Map<String, Any?> {
+  return attributes.getJSONObject()?.toMap() ?: mapOf()
 }
