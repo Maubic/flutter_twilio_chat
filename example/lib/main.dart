@@ -25,11 +25,14 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> initPlatformState() async {
     final String token =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6InR3aWxpby1mcGE7dj0xIn0.eyJqdGkiOiJTSzQwN2YyYmZlYmFiMmIzNTA2ZjU2Y2Y0MGYwYzVmZWRlLTE1ODYxODI4OTAiLCJncmFudHMiOnsiaWRlbnRpdHkiOiJjMzI3OWY5My0yZmVmLTQyYjUtYTE5Yy1jOWYzYTZkM2FjMTIiLCJjaGF0Ijp7InNlcnZpY2Vfc2lkIjoiSVM2NmY0ODQzODE2MTk0NmU5YTcwYzQ0ODYyMDhiYjg5MSJ9fSwiaWF0IjoxNTg2MTgyODkwLCJleHAiOjE1ODYxODY0OTAsImlzcyI6IlNLNDA3ZjJiZmViYWIyYjM1MDZmNTZjZjQwZjBjNWZlZGUiLCJzdWIiOiJBQzY2YWI0MzM5YzE3ODY0NDk4MjNkYTE4YzE3ZWQxNTgwIn0.m0V-nOELu6S_qsCdjim5T0mBzIYfe_BSIjnVa-Q0eJ8';
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6InR3aWxpby1mcGE7dj0xIn0.eyJqdGkiOiJTSzQwN2YyYmZlYmFiMmIzNTA2ZjU2Y2Y0MGYwYzVmZWRlLTE1ODYyNjAzODciLCJncmFudHMiOnsiaWRlbnRpdHkiOiJjMzI3OWY5My0yZmVmLTQyYjUtYTE5Yy1jOWYzYTZkM2FjMTIiLCJjaGF0Ijp7InNlcnZpY2Vfc2lkIjoiSVM2NmY0ODQzODE2MTk0NmU5YTcwYzQ0ODYyMDhiYjg5MSJ9fSwiaWF0IjoxNTg2MjYwMzg3LCJleHAiOjE1ODYyNjM5ODcsImlzcyI6IlNLNDA3ZjJiZmViYWIyYjM1MDZmNTZjZjQwZjBjNWZlZGUiLCJzdWIiOiJBQzY2YWI0MzM5YzE3ODY0NDk4MjNkYTE4YzE3ZWQxNTgwIn0.VOVRJjml5Wv0yaCKaj4gscONmy_cJ_-6xyYqyQKDn58';
     try {
       print('Before initialize');
       await twilioChat.initialize(token: token);
       print('After initialize');
+      twilioChat.events().listen((TwilioEvent event) {
+        print('Event received: $event');
+      });
       setState(() {
         initialized = true;
       });

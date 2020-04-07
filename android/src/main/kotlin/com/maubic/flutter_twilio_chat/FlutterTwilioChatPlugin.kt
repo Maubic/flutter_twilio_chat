@@ -152,17 +152,17 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
+            println(channel)
+            println(channel.getMessages())
             channel.getMessages().sendMessage(
               Message.options().withBody(messageText),
               object: CallbackListener<Message>() {
                 override fun onSuccess(message: Message) {
                   println("Sent message")
-                  channel.dispose()
                   result.success(null)
                 }
                 override fun onError(errorInfo: ErrorInfo) {
                   println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  channel.dispose()
                   result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
                 }
               }
@@ -184,12 +184,10 @@ public class FlutterTwilioChatPlugin
             channel.getMessages().setAllMessagesConsumedWithResult(
               object: CallbackListener<Long>() {
                 override fun onSuccess(index: Long) {
-                  channel.dispose()
                   result.success(null)
                 }
                 override fun onError(errorInfo: ErrorInfo) {
                   println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  channel.dispose()
                   result.error("MarkAsReadError", errorInfo.getMessage(), null)
                 }
               }
@@ -218,6 +216,22 @@ public class FlutterTwilioChatPlugin
   }
   override fun onChannelUpdated(channel: Channel?, reason: Channel.UpdateReason?) {
     println("onChannelUpdated")
+    if (reason == Channel.UpdateReason.LAST_MESSAGE) {
+      println("Last message changed")
+      channel?.messages?.getLastMessages(1, object: CallbackListener<List<Message>>() {
+        override fun onSuccess(messages: List<Message>) {
+          println("Message retrieved")
+          val message = messages[0]
+          eventSink?.success(mapOf(
+            "event" to "NewMessage",
+            "message" to serializeMessage(message)
+          ))
+        }
+        override fun onError(errorInfo: ErrorInfo) {
+          println("Error retrieving message")
+        }
+      })
+    }
   }
   override fun onChannelDeleted(channel: Channel?) {
     println("onChannelDeleted")
@@ -306,6 +320,17 @@ fun serializeChannel(channel: ChannelDescriptor): Map<String, Any> {
     "attributes" to serializeAttributes(channel.getAttributes()),
     "createdBy" to channel.getCreatedBy(),
     "unconsumedCount" to channel.getUnconsumedMessagesCount()
+  )
+}
+
+fun serializeMessage(message: Message): Map<String, Any> {
+  return mapOf(
+    "sid" to message.getSid(),
+    "body" to message.getMessageBody(),
+    "attributes" to serializeAttributes(message.getAttributes()),
+    "author" to message.getAuthor(),
+    "dateCreated" to message.getDateCreated(),
+    "channelSid" to message.getChannelSid()
   )
 }
 

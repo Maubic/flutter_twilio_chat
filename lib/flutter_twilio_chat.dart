@@ -5,6 +5,10 @@ import 'package:rxdart/rxdart.dart';
 
 import 'channel.dart';
 export 'channel.dart';
+import 'message.dart';
+export 'message.dart';
+import 'event.dart';
+export 'event.dart';
 
 class FlutterTwilioChat {
   static const MethodChannel _methodChannel =
@@ -22,6 +26,8 @@ class FlutterTwilioChat {
   FlutterTwilioChat() {
     _eventChannel.receiveBroadcastStream().cast<Map>().pipe(this.controller);
   }
+
+  Stream<Map> get stream => this.controller.stream;
 
   Future<List<TwilioChannel>> initialize(
       {@required String token, String region}) async {
@@ -59,6 +65,8 @@ class FlutterTwilioChat {
       print('Error: $err');
     }
   }
-}
 
-class TwilioEvent {}
+  Stream<TwilioEvent> events() {
+    return this.stream.map<TwilioEvent>(TwilioEvent.fromData);
+  }
+}
