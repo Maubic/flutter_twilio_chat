@@ -117,7 +117,7 @@ public class FlutterTwilioChatPlugin
               override fun onSuccess(paginator: Paginator<ChannelDescriptor>) {
                 paginator.getAll(
                   { channels: List<ChannelDescriptor> ->
-                    val channelData: List<Map<String, Any>> = channels.map(::serializeChannel)
+                    val channelData: List<Map<String, Any>> = channels.map(::serializeChannelDescriptor)
                     getAllLastMessages(channels, { messages: List<Message> ->
                       println("Received messages")
                       val messageData: List<Map<String, Any>> = messages.map(::serializeMessage)
@@ -215,6 +215,20 @@ public class FlutterTwilioChatPlugin
   // Twilio callbacks
   override fun onChannelJoined(channel: Channel?) {
     println("onChannelJoined")
+    if (channel != null) {
+      serializeChannel(
+        channel,
+        { channelData: Map<String, Any> ->
+          eventSink?.success(mapOf(
+            "event" to "ChannelJoined",
+            "channel" to channelData
+          ))
+        },
+        { errorInfo: ErrorInfo ->
+          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+        }
+      )
+    }
   }
   override fun onChannelInvited(channel: Channel?) {
     println("onChannelInvited")
@@ -361,7 +375,7 @@ fun getAllLastMessagesPlus(
   }
 }
 
-fun serializeChannel(channel: ChannelDescriptor): Map<String, Any> {
+fun serializeChannelDescriptor(channel: ChannelDescriptor): Map<String, Any> {
   return mapOf(
     "sid" to channel.getSid(),
     "uniqueName" to channel.getUniqueName(),
@@ -371,6 +385,25 @@ fun serializeChannel(channel: ChannelDescriptor): Map<String, Any> {
     "unconsumedCount" to channel.getUnconsumedMessagesCount(),
     "dateUpdated" to channel.getDateUpdated().getTime()
   )
+}
+
+fun serializeChannel(channel: Channel, onSuccess: (channelData: Map<String, Any>) -> Unit, onError: (errorInfo: ErrorInfo) -> Unit) {
+  channel.getUnconsumedMessagesCount(object: CallbackListener<Long>() {
+    override fun onSuccess(count: Long) {
+      onSuccess(mapOf(
+        "sid" to channel.getSid(),
+        "uniqueName" to channel.getUniqueName(),
+        "friendlyName" to channel.getFriendlyName(),
+        "attributes" to serializeAttributes(channel.getAttributes()),
+        "createdBy" to channel.getCreatedBy(),
+        "unconsumedCount" to count,
+        "dateUpdated" to channel.getDateUpdatedAsDate().getTime()
+      ))
+    }
+    override fun onError(errorInfo: ErrorInfo) {
+      onError(errorInfo)
+    }
+  })
 }
 
 fun serializeMessage(message: Message): Map<String, Any> {
