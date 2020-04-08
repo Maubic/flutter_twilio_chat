@@ -118,11 +118,17 @@ public class FlutterTwilioChatPlugin
                 paginator.getAll(
                   { channels: List<ChannelDescriptor> ->
                     val channelData: List<Map<String, Any>> = channels.map(::serializeChannel)
-                    result.success(mapOf(
-                      "channels" to channelData,
-                      // TODO
-                      "messages" to listOf()
-                    ))
+                    getAllLastMessages(channels, { messages: List<Message> ->
+                      println("Received messages")
+                      val messageData: List<Map<String, Any>> = messages.map(::serializeMessage)
+                      result.success(mapOf(
+                        "channels" to channelData,
+                        "messages" to messageData
+                      ))
+                    }, { errorInfo: ErrorInfo ->
+                      println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                      result.error("ChatClientCreateError", errorInfo.getMessage(), null)
+                    })
                   },
                   { errorInfo: ErrorInfo ->
                     println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -311,6 +317,47 @@ fun <T> Paginator<T>.getAllPlus(
     })
   } else {
     onSuccess(items.plus(paginatorItems))
+  }
+}
+
+fun getAllLastMessages(
+  channels: List<ChannelDescriptor>,
+  onSuccess: (messages: List<Message>) -> Unit,
+  onError: (error: ErrorInfo) -> Unit
+) {
+  getAllLastMessagesPlus(listOf(), channels, onSuccess, onError)
+}
+
+fun getAllLastMessagesPlus(
+  plusMessages: List<Message>,
+  channels: List<ChannelDescriptor>,
+  onSuccess: (messages: List<Message>) -> Unit,
+  onError: (error: ErrorInfo) -> Unit
+) {
+  if (channels.isEmpty()) {
+    onSuccess(plusMessages)
+  } else {
+    val channelDescriptor: ChannelDescriptor = channels[0]
+    channelDescriptor.getChannel(object: CallbackListener<Channel>() {
+      override fun onSuccess (channel: Channel) {
+        channel.getMessages().getLastMessages(50, object: CallbackListener<List<Message>>() {
+          override fun onSuccess (messages: List<Message>) {
+            getAllLastMessagesPlus(
+              plusMessages.plus(messages),
+              channels.drop(1),
+              onSuccess,
+              onError
+            )
+          }
+          override fun onError (errorInfo: ErrorInfo) {
+            onError(errorInfo)
+          }
+        })
+      }
+      override fun onError (err: ErrorInfo) {
+        onError(err)
+      }
+    })
   }
 }
 
