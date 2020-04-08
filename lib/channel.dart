@@ -7,6 +7,7 @@ class TwilioChannel {
   final Map attributes;
   final String createdBy;
   final int unconsumedCount;
+  final DateTime dateUpdated;
   TwilioChannel({
     @required this.sid,
     this.uniqueName = '',
@@ -14,6 +15,7 @@ class TwilioChannel {
     this.attributes,
     this.createdBy,
     this.unconsumedCount,
+    this.dateUpdated,
   });
 
   static TwilioChannel fromData(dynamic data) {
@@ -25,6 +27,7 @@ class TwilioChannel {
         attributes: data['attributes'],
         createdBy: data['createdBy'],
         unconsumedCount: data['unconsumedCount'],
+        dateUpdated: DateTime.fromMillisecondsSinceEpoch(data['dateUpdated']),
       );
     } catch (err) {
       print('Error parsing TwilioChannel: $err');
@@ -37,6 +40,7 @@ class TwilioChannel {
     attributes,
     createdBy,
     unconsumedCount,
+    dateUpdated,
   }) =>
       TwilioChannel(
         sid: this.sid,
@@ -45,5 +49,6 @@ class TwilioChannel {
         attributes: attributes ?? this.attributes,
         createdBy: createdBy ?? this.createdBy,
         unconsumedCount: unconsumedCount ?? this.unconsumedCount,
+        dateUpdated: dateUpdated ?? this.dateUpdated,
       );
 }

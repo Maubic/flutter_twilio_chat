@@ -29,15 +29,20 @@ class FlutterTwilioChat {
 
   Stream<Map> get stream => this.controller.stream;
 
-  Future<List<TwilioChannel>> initialize(
+  Future<ConnectionResult> initialize(
       {@required String token, String region}) async {
     final Map result = await _methodChannel.invokeMethod('initialize', {
       'token': token,
       'region': region,
     });
-    return result['channels']
-        .map<TwilioChannel>(TwilioChannel.fromData)
-        .toList();
+    return ConnectionResult(
+      channels: result['channels']
+          .map<TwilioChannel>(TwilioChannel.fromData)
+          .toList(),
+      messages: result['messages']
+          .map<TwilioMessage>(TwilioMessage.fromData)
+          .toList(),
+    );
   }
 
   Future<void> sendSimpleMessage({
@@ -69,4 +74,10 @@ class FlutterTwilioChat {
   Stream<TwilioEvent> events() {
     return this.stream.map<TwilioEvent>(TwilioEvent.fromData);
   }
+}
+
+class ConnectionResult {
+  final List<TwilioChannel> channels;
+  final List<TwilioMessage> messages;
+  ConnectionResult({@required this.channels, @required this.messages});
 }

@@ -119,7 +119,9 @@ public class FlutterTwilioChatPlugin
                   { channels: List<ChannelDescriptor> ->
                     val channelData: List<Map<String, Any>> = channels.map(::serializeChannel)
                     result.success(mapOf(
-                      "channels" to channelData
+                      "channels" to channelData,
+                      // TODO
+                      "messages" to listOf()
                     ))
                   },
                   { errorInfo: ErrorInfo ->
@@ -319,7 +321,8 @@ fun serializeChannel(channel: ChannelDescriptor): Map<String, Any> {
     "friendlyName" to channel.getFriendlyName(),
     "attributes" to serializeAttributes(channel.getAttributes()),
     "createdBy" to channel.getCreatedBy(),
-    "unconsumedCount" to channel.getUnconsumedMessagesCount()
+    "unconsumedCount" to channel.getUnconsumedMessagesCount(),
+    "dateUpdated" to channel.getDateUpdated().getTime()
   )
 }
 
