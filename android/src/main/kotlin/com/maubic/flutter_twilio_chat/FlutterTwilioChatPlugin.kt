@@ -2,6 +2,7 @@ package com.maubic.flutter_twilio_chat
 
 import androidx.annotation.NonNull;
 import android.content.Context
+import java.io.ByteArrayOutputStream
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -20,9 +21,12 @@ import com.twilio.chat.Channel
 import com.twilio.chat.ChannelDescriptor
 import com.twilio.chat.User
 import com.twilio.chat.Message
+import com.twilio.chat.Message.Media
 import com.twilio.chat.ErrorInfo
 import com.twilio.chat.Paginator
 import com.twilio.chat.Attributes
+import com.twilio.chat.StatusListener
+import com.twilio.chat.ProgressListener
 import com.maubic.flutter_twilio_chat.fromJson
 import com.maubic.flutter_twilio_chat.toMap
 import com.maubic.flutter_twilio_chat.toList
@@ -235,6 +239,63 @@ public class FlutterTwilioChatPlugin
           }
         }
       )
+    } else if (call.method == "getAttachment") {
+      val channelId: String = call.argument<String>("channelId")!!
+      val index: Long = call.argument<Long>("index")!!
+      this.chatClient?.channels?.getChannel(
+        channelId,
+        object: CallbackListener<Channel>() {
+          override fun onSuccess(channel: Channel) {
+            println("Recovered channel")
+            channel.getMessages().getMessageByIndex(
+              index,
+              object: CallbackListener<Message>() {
+                override fun onSuccess(message: Message) {
+                  if (!message.hasMedia()) {
+                    result.error("GetAttachmentError", "Message does not have media", null)
+                  } else {
+                    val media: Media = message.getMedia()
+                    val size: Long = media.getSize()
+                    val outputStream: ByteArrayOutputStream = ByteArrayOutputStream(size.toInt())
+                    media.download(
+                      outputStream,
+                      object: StatusListener() {
+                        override fun onSuccess() {
+                          println("Downloaded media")
+                          result.success(outputStream.toByteArray())
+                        }
+                        override fun onError(errorInfo: ErrorInfo) {
+                          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                          result.error("GetAttachmentError", errorInfo.getMessage(), null)
+                        }
+                      },
+                      object: ProgressListener() {
+                        override fun onStarted() {
+                          println("Media download onStarted")
+                        }
+                        override fun onProgress(bytes: Long) {
+                          println("Media download onProgress: ${bytes}")
+                        }
+                        override fun onCompleted(mediaSid: String) {
+                          println("Media download onCompleted: ${mediaSid}")
+                        }
+                      }
+                    )
+                  }
+                }
+                override fun onError(errorInfo: ErrorInfo) {
+                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                  result.error("GetAttachmentError", errorInfo.getMessage(), null)
+                }
+              }
+            )
+          }
+          override fun onError(errorInfo: ErrorInfo) {
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            result.error("GetAttachmentError", errorInfo.getMessage(), null)
+          }
+        }
+      )
     } else {
       result.notImplemented()
     }
@@ -441,7 +502,9 @@ fun serializeMessage(message: Message): Map<String, Any> {
     "attributes" to serializeAttributes(message.getAttributes()),
     "author" to message.getAuthor(),
     "dateCreated" to message.getDateCreated(),
-    "channelSid" to message.getChannelSid()
+    "channelSid" to message.getChannelSid(),
+    "hasMedia" to message.hasMedia(),
+    "index" to message.getMessageIndex()
   )
 }
 

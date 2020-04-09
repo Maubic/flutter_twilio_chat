@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:flutter/services.dart';
 import 'package:rxdart/rxdart.dart';
@@ -82,6 +84,20 @@ class FlutterTwilioChat {
     try {
       await _methodChannel.invokeMethod('markAsRead', {
         'channelId': channelId,
+      });
+    } catch (err) {
+      print('Error: $err');
+    }
+  }
+
+  Future<Uint8List> getAttachment({
+    @required String channelId,
+    @required int index,
+  }) async {
+    try {
+      return await _methodChannel.invokeMethod('getAttachment', {
+        'channelId': channelId,
+        'index': index,
       });
     } catch (err) {
       print('Error: $err');

@@ -8,6 +8,8 @@ class TwilioMessage {
   final String author;
   final DateTime dateCreated;
   final String channelSid;
+  final bool hasMedia;
+  final int index;
   TwilioMessage({
     @required this.sid,
     this.body = '',
@@ -15,6 +17,8 @@ class TwilioMessage {
     this.author,
     this.dateCreated,
     @required this.channelSid,
+    this.hasMedia = false,
+    @required this.index,
   });
 
   static TwilioMessage fromData(dynamic data) {
@@ -26,6 +30,8 @@ class TwilioMessage {
         author: data['author'],
         dateCreated: DateTime.parse(data['dateCreated']),
         channelSid: data['channelSid'],
+        hasMedia: data['hasMedia'] ?? false,
+        index: data['index'],
       );
     } catch (err) {
       print('Error parsing TwilioMessage: $err');
@@ -38,6 +44,8 @@ class TwilioMessage {
     author,
     dateCreated,
     channelSid,
+    hasMedia,
+    index,
   }) =>
       TwilioMessage(
         sid: this.sid,
@@ -46,5 +54,7 @@ class TwilioMessage {
         author: author ?? this.author,
         dateCreated: dateCreated ?? this.dateCreated,
         channelSid: channelSid ?? this.channelSid,
+        hasMedia: hasMedia ?? this.hasMedia,
+        index: index ?? this.index,
       );
 }
