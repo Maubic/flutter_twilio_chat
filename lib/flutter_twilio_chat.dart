@@ -59,6 +59,23 @@ class FlutterTwilioChat {
     }
   }
 
+  Future<void> sendAttachmentMessage({
+    @required String channelId,
+    @required File attachment,
+    @required String type,
+  }) async {
+    try {
+      final Uint8List attachmentData = await attachment.readAsBytes();
+      await _methodChannel.invokeMethod('sendAttachmentMessage', {
+        'channelId': channelId,
+        'attachmentData': attachmentData,
+        'type': type,
+      });
+    } catch (err) {
+      print('Error: $err');
+    }
+  }
+
   Future<void> markAsRead({
     @required String channelId,
   }) async {

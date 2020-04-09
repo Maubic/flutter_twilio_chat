@@ -160,8 +160,6 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
-            println(channel)
-            println(channel.getMessages())
             channel.getMessages().sendMessage(
               Message.options().withBody(messageText),
               object: CallbackListener<Message>() {
@@ -179,6 +177,36 @@ public class FlutterTwilioChatPlugin
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
+          }
+        }
+      )
+    } else if (call.method == "sendAttachmentMessage") {
+      val channelId: String = call.argument<String>("channelId")!!
+      val attachmentData: ByteArray = call.argument<ByteArray>("attachmentData")!!
+      val type: String = call.argument<String>("type")!!
+
+      this.chatClient?.channels?.getChannel(
+        channelId,
+        object: CallbackListener<Channel>() {
+          override fun onSuccess(channel: Channel) {
+            println("Recovered channel")
+            channel.getMessages().sendMessage(
+              Message.options().withMedia(attachmentData.inputStream(), type),
+              object: CallbackListener<Message>() {
+                override fun onSuccess(message: Message) {
+                  println("Sent message")
+                  result.success(null)
+                }
+                override fun onError(errorInfo: ErrorInfo) {
+                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                  result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
+                }
+              }
+            )
+          }
+          override fun onError(errorInfo: ErrorInfo) {
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            result.error("SendAttachmentMessageError", errorInfo.getMessage(), null)
           }
         }
       )
