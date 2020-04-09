@@ -13,6 +13,10 @@ abstract class TwilioEvent {
         return ChannelJoinedEvent(
           channel: TwilioChannel.fromData(data['channel']),
         );
+      case 'TokenAboutToExpire':
+        return TokenAboutToExpireEvent();
+      case 'TokenExpired':
+        return TokenExpiredEvent();
       default:
         return UnknownEvent();
     }
@@ -28,5 +32,9 @@ class ChannelJoinedEvent extends TwilioEvent {
   final TwilioChannel channel;
   ChannelJoinedEvent({@required this.channel});
 }
+
+class TokenAboutToExpireEvent extends TwilioEvent {}
+
+class TokenExpiredEvent extends TwilioEvent {}
 
 class UnknownEvent extends TwilioEvent {}

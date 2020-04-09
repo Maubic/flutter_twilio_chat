@@ -296,6 +296,18 @@ public class FlutterTwilioChatPlugin
           }
         }
       )
+    } else if (call.method == "updateToken") {
+      val token: String = call.argument<String>("token")!!
+      this.chatClient?.updateToken(token, object: StatusListener() {
+        override fun onSuccess() {
+          println("Token updated")
+          result.success(null)
+        }
+        override fun onError(errorInfo: ErrorInfo) {
+          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+          result.error("UpdateTokenError", errorInfo.getMessage(), null)
+        }
+      })
     } else {
       result.notImplemented()
     }
@@ -361,9 +373,15 @@ public class FlutterTwilioChatPlugin
   }
   override fun onTokenExpired() {
     println("onTokenExpired")
+    eventSink?.success(mapOf(
+      "event" to "TokenExpired"
+    ))
   }
   override fun onTokenAboutToExpire() {
     println("onTokenAboutToExpire")
+    eventSink?.success(mapOf(
+      "event" to "TokenAboutToExpire"
+    ))
   }
   override fun onUserUpdated(user: User?, reason: User.UpdateReason?) {
     println("onUserUpdated")

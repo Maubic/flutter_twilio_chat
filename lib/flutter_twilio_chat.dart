@@ -104,6 +104,12 @@ class FlutterTwilioChat {
     }
   }
 
+  Future<void> updateToken(String token) {
+    return _methodChannel.invokeMethod('updateToken', {
+      'token': token,
+    });
+  }
+
   Stream<TwilioEvent> events() {
     return this.stream.map<TwilioEvent>(TwilioEvent.fromData);
   }
