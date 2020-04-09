@@ -19,6 +19,8 @@ import com.twilio.chat.ChatClient.Properties
 import com.twilio.chat.ChatClientListener
 import com.twilio.chat.Channel
 import com.twilio.chat.ChannelDescriptor
+import com.twilio.chat.ChannelListener
+import com.twilio.chat.Member
 import com.twilio.chat.User
 import com.twilio.chat.Message
 import com.twilio.chat.Message.Media
@@ -164,19 +166,21 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
-            channel.getMessages().sendMessage(
-              Message.options().withBody(messageText),
-              object: CallbackListener<Message>() {
-                override fun onSuccess(message: Message) {
-                  println("Sent message")
-                  result.success(null)
+            channel.whenSynchronized({
+              channel.getMessages().sendMessage(
+                Message.options().withBody(messageText),
+                object: CallbackListener<Message>() {
+                  override fun onSuccess(message: Message) {
+                    println("Sent message")
+                    result.success(null)
+                  }
+                  override fun onError(errorInfo: ErrorInfo) {
+                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
+                  }
                 }
-                override fun onError(errorInfo: ErrorInfo) {
-                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
-                }
-              }
-            )
+              )
+            })
           }
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -194,19 +198,21 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
-            channel.getMessages().sendMessage(
-              Message.options().withMedia(attachmentData.inputStream(), type),
-              object: CallbackListener<Message>() {
-                override fun onSuccess(message: Message) {
-                  println("Sent message")
-                  result.success(null)
+            channel.whenSynchronized({
+              channel.getMessages().sendMessage(
+                Message.options().withMedia(attachmentData.inputStream(), type),
+                object: CallbackListener<Message>() {
+                  override fun onSuccess(message: Message) {
+                    println("Sent message")
+                    result.success(null)
+                  }
+                  override fun onError(errorInfo: ErrorInfo) {
+                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
+                  }
                 }
-                override fun onError(errorInfo: ErrorInfo) {
-                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
-                }
-              }
-            )
+              )
+          })
           }
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -221,17 +227,19 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
-            channel.getMessages().setAllMessagesConsumedWithResult(
-              object: CallbackListener<Long>() {
-                override fun onSuccess(index: Long) {
-                  result.success(null)
+            channel.whenSynchronized({
+              channel.getMessages().setAllMessagesConsumedWithResult(
+                object: CallbackListener<Long>() {
+                  override fun onSuccess(index: Long) {
+                    result.success(null)
+                  }
+                  override fun onError(errorInfo: ErrorInfo) {
+                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("MarkAsReadError", errorInfo.getMessage(), null)
+                  }
                 }
-                override fun onError(errorInfo: ErrorInfo) {
-                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  result.error("MarkAsReadError", errorInfo.getMessage(), null)
-                }
-              }
-            )
+              )
+            })
           }
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -247,48 +255,50 @@ public class FlutterTwilioChatPlugin
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
-            channel.getMessages().getMessageByIndex(
-              index,
-              object: CallbackListener<Message>() {
-                override fun onSuccess(message: Message) {
-                  if (!message.hasMedia()) {
-                    result.error("GetAttachmentError", "Message does not have media", null)
-                  } else {
-                    val media: Media = message.getMedia()
-                    val size: Long = media.getSize()
-                    val outputStream: ByteArrayOutputStream = ByteArrayOutputStream(size.toInt())
-                    media.download(
-                      outputStream,
-                      object: StatusListener() {
-                        override fun onSuccess() {
-                          println("Downloaded media")
-                          result.success(outputStream.toByteArray())
+            channel.whenSynchronized({
+              channel.getMessages().getMessageByIndex(
+                index,
+                object: CallbackListener<Message>() {
+                  override fun onSuccess(message: Message) {
+                    if (!message.hasMedia()) {
+                      result.error("GetAttachmentError", "Message does not have media", null)
+                    } else {
+                      val media: Media = message.getMedia()
+                      val size: Long = media.getSize()
+                      val outputStream: ByteArrayOutputStream = ByteArrayOutputStream(size.toInt())
+                      media.download(
+                        outputStream,
+                        object: StatusListener() {
+                          override fun onSuccess() {
+                            println("Downloaded media")
+                            result.success(outputStream.toByteArray())
+                          }
+                          override fun onError(errorInfo: ErrorInfo) {
+                            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                            result.error("GetAttachmentError", errorInfo.getMessage(), null)
+                          }
+                        },
+                        object: ProgressListener() {
+                          override fun onStarted() {
+                            println("Media download onStarted")
+                          }
+                          override fun onProgress(bytes: Long) {
+                            println("Media download onProgress: ${bytes}")
+                          }
+                          override fun onCompleted(mediaSid: String) {
+                            println("Media download onCompleted: ${mediaSid}")
+                          }
                         }
-                        override fun onError(errorInfo: ErrorInfo) {
-                          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                          result.error("GetAttachmentError", errorInfo.getMessage(), null)
-                        }
-                      },
-                      object: ProgressListener() {
-                        override fun onStarted() {
-                          println("Media download onStarted")
-                        }
-                        override fun onProgress(bytes: Long) {
-                          println("Media download onProgress: ${bytes}")
-                        }
-                        override fun onCompleted(mediaSid: String) {
-                          println("Media download onCompleted: ${mediaSid}")
-                        }
-                      }
-                    )
+                      )
+                    }
+                  }
+                  override fun onError(errorInfo: ErrorInfo) {
+                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("GetAttachmentError", errorInfo.getMessage(), null)
                   }
                 }
-                override fun onError(errorInfo: ErrorInfo) {
-                  println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                  result.error("GetAttachmentError", errorInfo.getMessage(), null)
-                }
-              }
-            )
+              )
+            })
           }
           override fun onError(errorInfo: ErrorInfo) {
             println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
@@ -461,23 +471,51 @@ fun getAllLastMessagesPlus(
     val channelDescriptor: ChannelDescriptor = channels[0]
     channelDescriptor.getChannel(object: CallbackListener<Channel>() {
       override fun onSuccess (channel: Channel) {
-        channel.getMessages().getLastMessages(50, object: CallbackListener<List<Message>>() {
-          override fun onSuccess (messages: List<Message>) {
-            getAllLastMessagesPlus(
-              plusMessages.plus(messages),
-              channels.drop(1),
-              onSuccess,
-              onError
-            )
-          }
-          override fun onError (errorInfo: ErrorInfo) {
-            onError(errorInfo)
-          }
+        channel.whenSynchronized({
+          channel.getMessages().getLastMessages(50, object: CallbackListener<List<Message>>() {
+            override fun onSuccess (messages: List<Message>) {
+              getAllLastMessagesPlus(
+                plusMessages.plus(messages),
+                channels.drop(1),
+                onSuccess,
+                onError
+              )
+            }
+            override fun onError (errorInfo: ErrorInfo) {
+              onError(errorInfo)
+            }
+          })
         })
       }
       override fun onError (err: ErrorInfo) {
         onError(err)
       }
+    })
+  }
+}
+
+fun Channel.whenSynchronized(
+  onSuccess: () -> Unit
+) {
+  if (this.getSynchronizationStatus().isAtLeast(Channel.SynchronizationStatus.ALL)) {
+    onSuccess()
+  } else {
+    this.addListener(object: ChannelListener {
+      override fun onSynchronizationChanged(channel: Channel) {
+        if (channel.getSynchronizationStatus().isAtLeast(Channel.SynchronizationStatus.ALL)) {
+          channel.removeAllListeners()
+          onSuccess()
+        }
+      }
+      // Rest of the events
+      override fun onMessageAdded(message: Message) {}
+      override fun onMessageUpdated(message: Message, reason: Message.UpdateReason) {}
+      override fun onMessageDeleted(message: Message) {}
+      override fun onMemberAdded(member: Member) {}
+      override fun onMemberUpdated(member: Member, reason: Member.UpdateReason) {}
+      override fun onMemberDeleted(member: Member) {}
+      override fun onTypingStarted(channel: Channel, member: Member) {}
+      override fun onTypingEnded(channel: Channel, member: Member) {}
     })
   }
 }
