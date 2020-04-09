@@ -347,22 +347,49 @@ public class FlutterTwilioChatPlugin
   override fun onChannelAdded(channel: Channel?) {
     println("onChannelAdded")
   }
-  override fun onChannelUpdated(channel: Channel?, reason: Channel.UpdateReason?) {
+  override fun onChannelUpdated(channel: Channel, reason: Channel.UpdateReason?) {
     println("onChannelUpdated")
     if (reason == Channel.UpdateReason.LAST_MESSAGE) {
       println("Last message changed")
-      channel?.messages?.getLastMessages(1, object: CallbackListener<List<Message>>() {
-        override fun onSuccess(messages: List<Message>) {
-          println("Message retrieved")
-          val message = messages[0]
-          eventSink?.success(mapOf(
-            "event" to "NewMessage",
-            "message" to serializeMessage(message)
-          ))
-        }
-        override fun onError(errorInfo: ErrorInfo) {
-          println("Error retrieving message")
-        }
+      channel.whenSynchronized({
+        serializeChannel(
+          channel,
+          { channelData: Map<String, Any> ->
+            channel.getMessages().getLastMessages(1, object: CallbackListener<List<Message>>() {
+              override fun onSuccess(messages: List<Message>) {
+                println("Message retrieved")
+                val message = messages[0]
+                eventSink?.success(mapOf(
+                  "event" to "NewMessage",
+                  "message" to serializeMessage(message),
+                  "channel" to channelData
+                ))
+              }
+              override fun onError(errorInfo: ErrorInfo) {
+                println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+              }
+            })
+          },
+          { errorInfo: ErrorInfo ->
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+          }
+        )
+      })
+    } else if (reason == Channel.UpdateReason.LAST_CONSUMED_MESSAGE_INDEX) {
+      println("Last consumed message changed")
+      channel.whenSynchronized({
+        serializeChannel(
+          channel,
+          { channelData: Map<String, Any> ->
+            eventSink?.success(mapOf(
+              "event" to "ChannelUpdated",
+              "channel" to channelData
+            ))
+          },
+          { errorInfo: ErrorInfo ->
+            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+          }
+        )
       })
     }
   }
