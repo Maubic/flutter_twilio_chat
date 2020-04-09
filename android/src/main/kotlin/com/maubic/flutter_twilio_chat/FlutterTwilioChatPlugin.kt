@@ -126,7 +126,7 @@ public class FlutterTwilioChatPlugin
                     val channelData: List<Map<String, Any>> = channels.map(::serializeChannelDescriptor)
                     getAllLastMessages(channels, { messages: List<Message> ->
                       println("Received messages")
-                      val messageData: List<Map<String, Any>> = messages.map(::serializeMessage)
+                      val messageData: List<Map<String, Any?>> = messages.map(::serializeMessage)
                       result.success(mapOf(
                         "channels" to channelData,
                         "messages" to messageData
@@ -247,6 +247,7 @@ public class FlutterTwilioChatPlugin
           }
         }
       )
+    // getAttachment: UNUSED
     } else if (call.method == "getAttachment") {
       val channelId: String = call.argument<String>("channelId")!!
       val index: Long = call.argument<Long>("index")!!
@@ -578,7 +579,7 @@ fun serializeChannel(channel: Channel, onSuccess: (channelData: Map<String, Any>
   })
 }
 
-fun serializeMessage(message: Message): Map<String, Any> {
+fun serializeMessage(message: Message): Map<String, Any?> {
   return mapOf(
     "sid" to message.getSid(),
     "body" to message.getMessageBody(),
@@ -587,7 +588,8 @@ fun serializeMessage(message: Message): Map<String, Any> {
     "dateCreated" to message.getDateCreated(),
     "channelSid" to message.getChannelSid(),
     "hasMedia" to message.hasMedia(),
-    "index" to message.getMessageIndex()
+    "index" to message.getMessageIndex(),
+    "mediaSid" to message.getMedia()?.getSid()
   )
 }
 

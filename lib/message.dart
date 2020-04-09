@@ -10,6 +10,7 @@ class TwilioMessage {
   final String channelSid;
   final bool hasMedia;
   final int index;
+  final String mediaSid;
   TwilioMessage({
     @required this.sid,
     this.body = '',
@@ -19,6 +20,7 @@ class TwilioMessage {
     @required this.channelSid,
     this.hasMedia = false,
     @required this.index,
+    this.mediaSid,
   });
 
   static TwilioMessage fromData(dynamic data) {
@@ -32,6 +34,7 @@ class TwilioMessage {
         channelSid: data['channelSid'],
         hasMedia: data['hasMedia'] ?? false,
         index: data['index'],
+        mediaSid: data['mediaSid'],
       );
     } catch (err) {
       print('Error parsing TwilioMessage: $err');
@@ -46,6 +49,7 @@ class TwilioMessage {
     channelSid,
     hasMedia,
     index,
+    mediaSid,
   }) =>
       TwilioMessage(
         sid: this.sid,
@@ -56,5 +60,6 @@ class TwilioMessage {
         channelSid: channelSid ?? this.channelSid,
         hasMedia: hasMedia ?? this.hasMedia,
         index: index ?? this.index,
+        mediaSid: mediaSid ?? this.mediaSid,
       );
 }
