@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:meta/meta.dart';
 
 class TwilioMessage {
@@ -21,7 +22,7 @@ class TwilioMessage {
       return TwilioMessage(
         sid: data['sid'],
         body: data['body'],
-        attributes: data['attributes'],
+        attributes: jsonDecode(data['attributes']),
         author: data['author'],
         dateCreated: DateTime.parse(data['dateCreated']),
         channelSid: data['channelSid'],

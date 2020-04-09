@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:meta/meta.dart';
 
 class TwilioChannel {
@@ -24,7 +25,7 @@ class TwilioChannel {
         sid: data['sid'],
         uniqueName: data['uniqueName'],
         friendlyName: data['friendlyName'],
-        attributes: data['attributes'],
+        attributes: jsonDecode(data['attributes']),
         createdBy: data['createdBy'],
         unconsumedCount: data['unconsumedCount'],
         dateUpdated: DateTime.fromMillisecondsSinceEpoch(data['dateUpdated']),

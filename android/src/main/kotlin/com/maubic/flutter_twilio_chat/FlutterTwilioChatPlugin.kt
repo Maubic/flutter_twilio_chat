@@ -417,6 +417,6 @@ fun serializeMessage(message: Message): Map<String, Any> {
   )
 }
 
-fun serializeAttributes(attributes: Attributes): Map<String, Any?> {
-  return attributes.getJSONObject()?.toMap() ?: mapOf()
+fun serializeAttributes(attributes: Attributes): String {
+  return attributes.getJSONObject().toString()
 }
