@@ -132,12 +132,12 @@ public class FlutterTwilioChatPlugin
                         "messages" to messageData
                       ))
                     }, { errorInfo: ErrorInfo ->
-                      println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                      println("Error in getAllLastMessages: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                       result.error("ChatClientCreateError", errorInfo.getMessage(), null)
                     })
                   },
                   { errorInfo: ErrorInfo ->
-                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    println("Error in getAll: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                     result.error("ChatClientCreateError", errorInfo.getMessage(), null)
                   }
                 )
@@ -151,7 +151,7 @@ public class FlutterTwilioChatPlugin
             //result.success(null)
           }
           override fun onError(errorInfo: ErrorInfo) {
-            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            println("Error in getUserChannelsList: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("ChatClientCreateError", errorInfo.getMessage(), null)
           }
         }
@@ -175,7 +175,7 @@ public class FlutterTwilioChatPlugin
                     result.success(null)
                   }
                   override fun onError(errorInfo: ErrorInfo) {
-                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    println("Error in sendMessage: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                     result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
                   }
                 }
@@ -183,7 +183,7 @@ public class FlutterTwilioChatPlugin
             })
           }
           override fun onError(errorInfo: ErrorInfo) {
-            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
           }
         }
@@ -207,7 +207,7 @@ public class FlutterTwilioChatPlugin
                     result.success(null)
                   }
                   override fun onError(errorInfo: ErrorInfo) {
-                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    println("Error in sendMessage: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                     result.error("SendSimpleMessageError", errorInfo.getMessage(), null)
                   }
                 }
@@ -215,7 +215,7 @@ public class FlutterTwilioChatPlugin
           })
           }
           override fun onError(errorInfo: ErrorInfo) {
-            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("SendAttachmentMessageError", errorInfo.getMessage(), null)
           }
         }
@@ -234,7 +234,7 @@ public class FlutterTwilioChatPlugin
                     result.success(null)
                   }
                   override fun onError(errorInfo: ErrorInfo) {
-                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    println("Error in setAllMessagesConsumed: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                     result.error("MarkAsReadError", errorInfo.getMessage(), null)
                   }
                 }
@@ -242,7 +242,7 @@ public class FlutterTwilioChatPlugin
             })
           }
           override fun onError(errorInfo: ErrorInfo) {
-            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("MarkAsReadError", errorInfo.getMessage(), null)
           }
         }
@@ -275,7 +275,7 @@ public class FlutterTwilioChatPlugin
                             result.success(outputStream.toByteArray())
                           }
                           override fun onError(errorInfo: ErrorInfo) {
-                            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                            println("Error in download: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                             result.error("GetAttachmentError", errorInfo.getMessage(), null)
                           }
                         },
@@ -294,7 +294,7 @@ public class FlutterTwilioChatPlugin
                     }
                   }
                   override fun onError(errorInfo: ErrorInfo) {
-                    println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    println("Error in getMessageByIndex: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                     result.error("GetAttachmentError", errorInfo.getMessage(), null)
                   }
                 }
@@ -302,7 +302,7 @@ public class FlutterTwilioChatPlugin
             })
           }
           override fun onError(errorInfo: ErrorInfo) {
-            println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
             result.error("GetAttachmentError", errorInfo.getMessage(), null)
           }
         }
@@ -315,7 +315,7 @@ public class FlutterTwilioChatPlugin
           result.success(null)
         }
         override fun onError(errorInfo: ErrorInfo) {
-          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+          println("Error in updateToken: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
           result.error("UpdateTokenError", errorInfo.getMessage(), null)
         }
       })
@@ -328,18 +328,20 @@ public class FlutterTwilioChatPlugin
   override fun onChannelJoined(channel: Channel?) {
     println("onChannelJoined")
     if (channel != null) {
-      serializeChannel(
-        channel,
-        { channelData: Map<String, Any> ->
-          eventSink?.success(mapOf(
-            "event" to "ChannelJoined",
-            "channel" to channelData
-          ))
-        },
-        { errorInfo: ErrorInfo ->
-          println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-        }
-      )
+      channel.whenSynchronized({
+        serializeChannel(
+          channel,
+          { channelData: Map<String, Any> ->
+            eventSink?.success(mapOf(
+              "event" to "ChannelJoined",
+              "channel" to channelData
+            ))
+          },
+          { errorInfo: ErrorInfo ->
+            println("Error in serializeChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+          }
+        )
+      })
     }
   }
   override fun onChannelInvited(channel: Channel?) {
