@@ -228,6 +228,19 @@ public class FlutterTwilioChatPlugin
           override fun onSuccess(channel: Channel) {
             println("Recovered channel")
             channel.whenSynchronized({
+              // Workaround: A veces no salta el evento "onChannelJoined", lo forzamos
+              serializeChannel(
+                channel,
+                { channelData: Map<String, Any> ->
+                  eventSink?.success(mapOf(
+                    "event" to "ChannelJoined",
+                    "channel" to channelData
+                  ))
+                },
+                { errorInfo: ErrorInfo ->
+                  println("Error in serializeChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                }
+              )
               channel.getMessages().setAllMessagesConsumedWithResult(
                 object: CallbackListener<Long>() {
                   override fun onSuccess(index: Long) {
