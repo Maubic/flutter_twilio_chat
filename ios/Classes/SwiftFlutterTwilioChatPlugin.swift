@@ -134,11 +134,22 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
                         self!.traceLevel(depth: "1", val: &level, inc: false)
                         group.leave() // 1 - Successful
                         for channelDescriptor in (paginator?.items())! {
+
+                            print("[Maubic - FlutterTwilioChat] Connected - Channel: \(channelDescriptor.friendlyName ?? "NO_CHANNEL")")
+                            
+                            self!.traceLevel(depth: "5", val: &level, inc: true)
+                            group.enter() // 5
+                            self?.toNSDictionaryWithCompletion(channel: channelDescriptor, userCompletionHandler: { (channelData) in
+                                if (channelData != nil) {
+                                    self?.myChannels.append(channelData!)
+                                }
+                                self!.traceLevel(depth: "5", val: &level, inc: false)
+                                group.leave() // 5
+                            })
+                            
+
                             self!.traceLevel(depth: "3", val: &level, inc: true)
                             group.enter() // 3 - foreach ChannelDescriptor
-                            print("[Maubic - FlutterTwilioChat] Connected - Channel: \(channelDescriptor.friendlyName ?? "NO_CHANNEL")")
-                            self?.myChannels.append((self?.toNSDictionary(channel: channelDescriptor))!)
-
                             
                             channelDescriptor.channel(completion:{ (result, channel) in
                                 if result.isSuccessful() {
@@ -231,8 +242,10 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
         return result
     }
     
-
-    public func toNSDictionary(channel: TCHChannel) -> NSDictionary {
+    /*
+    
+    
+    public func toNSDictionary2(channel: TCHChannel) -> NSDictionary {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
@@ -240,6 +253,7 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
         // SNA: OJO, corregir la fecha!
         let dateUpdated = Date.init(timeIntervalSinceNow: 0).timeIntervalSince1970
         //var attributes: Any
+        
         
         let dicRoom : NSDictionary = [
             "sid" : channel.sid as Any,
@@ -254,13 +268,15 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
         ]
         return dicRoom
     }
-    
-    public func toNSDictionary(channel: TCHChannelDescriptor) -> NSDictionary {
+
+    public func toNSDictionary2(channel: TCHChannelDescriptor) -> NSDictionary {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
         let dateUpdated = channel.dateUpdated?.timeIntervalSince1970 ?? 0.0
         //var attributes: Any
+        
+        
         
         let dicRoom : NSDictionary = [
             "sid" : channel.sid as Any,
@@ -274,6 +290,87 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
             "dateUpdated" : Int(dateUpdated*1000),
         ]
         return dicRoom
+    }
+
+    */
+    
+    public func toNSDictionaryWithCompletion(channel: TCHChannel, userCompletionHandler: @escaping (NSDictionary?) -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        //let dateUpdated = channel.dateUpdated?.timeIntervalSince1970 ?? 0.0
+        // SNA: OJO, corregir la fecha!
+        let dateUpdated = Date.init(timeIntervalSinceNow: 0).timeIntervalSince1970
+        //var attributes: Any
+        
+        
+        channel.getUnconsumedMessagesCount(completion: { (result, count) in
+            if result.isSuccessful() {
+                var friendlyName = " "
+                if (channel.friendlyName != nil) {
+                    friendlyName = channel.friendlyName ?? " "
+                }
+                let dicRoom : NSDictionary = [
+                    "sid" : channel.sid as Any,
+                    "uniqueName" : channel.uniqueName as Any,
+                    "friendlyName" : friendlyName as Any,
+                    //"friendlyName" : "",
+                    "attributes" : self.serializeAttributes(attributes: channel.attributes()) as Any,
+                    //"attributes" : "{}",
+                    "createdBy" : channel.createdBy as Any,
+                    "unconsumedCount" : count, // SNA: get Unconsumed Count
+                    "dateUpdated" : Int(dateUpdated*1000),
+                ]
+                
+                userCompletionHandler(dicRoom)
+            } else {
+                userCompletionHandler(nil)
+            }
+        })
+                
+
+    }
+
+
+    
+    public func toNSDictionaryWithCompletion(channel: TCHChannelDescriptor, userCompletionHandler: @escaping (NSDictionary?) -> Void) {
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        let dateUpdated = channel.dateUpdated?.timeIntervalSince1970 ?? 0.0
+        
+        channel.channel(completion:{ (result, channel) in
+            if result.isSuccessful() {
+                channel!.getUnconsumedMessagesCount(completion: { (result, count) in
+                if result.isSuccessful() {
+                    var friendlyName = " "
+                    if (channel?.friendlyName != nil) {
+                        friendlyName = channel?.friendlyName ?? " "
+                    }
+                    let dicRoom: NSDictionary = [
+                        "sid" : channel?.sid as Any,
+                        "uniqueName" : channel?.uniqueName as Any,
+                        "friendlyName" : friendlyName as Any,
+                            //"friendlyName" : "",
+                        "attributes" : self.serializeAttributes(attributes: channel?.attributes()) as Any,
+                            //"attributes" : "{}",
+                        "createdBy" : channel?.createdBy as Any,
+                            "unconsumedCount" : count, // SNA: get Unconsumed Count
+                            "dateUpdated" : Int(dateUpdated*1000),
+                    ]
+                    userCompletionHandler(dicRoom)
+                } else {
+                    userCompletionHandler(nil)
+                }
+
+                })
+            } else {
+                userCompletionHandler(nil)
+            }
+        })
+
+
     }
     
     public func toNSDictionary(message: TCHMessage, channelSid: String) -> NSDictionary {
@@ -469,6 +566,42 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
             }
             return
         case "markAsRead":
+            print("[Maubic - FlutterTwilioChat] markAsRead")
+            
+            guard let args = call.arguments else { return }
+            
+            if let myArgs = args as? [String: Any] {
+                guard let channelId = myArgs["channelId"] as? String else {
+                    flutterResult(FlutterError(
+                        code: "ERR_RESULT",
+                        message: "[Maubic - FlutterTwilioChat]: no channelId provided: (sendAttachmentMessage) \(args)",
+                        details: nil))
+                    return
+                }
+                
+                self.chatClient?.channelsList()?.channel(withSidOrUniqueName: channelId, completion: {(result, channel) in
+                    if (result.isSuccessful()) {
+                        channel?.messages?.setAllMessagesConsumedWithCompletion({ (result, count) in
+                            print("[Maubic - FlutterTwilioChat] markAsRead - DONE")
+                            
+                            // Hacemos que se recargue la lista de canales
+                            self.toNSDictionaryWithCompletion(channel: channel!, userCompletionHandler: { (channelData) in
+                                if (channelData != nil) {
+                                    let data : NSDictionary = [
+                                        "event" : "ChannelJoined",
+                                        "data"  : channelData as Any
+                                    ]
+                                        
+                                    self.sendDataToFlutter(data: data)
+                                }
+                            })
+                            
+                            flutterResult(true)
+                            
+                        })
+                    }
+                })
+            }
             // SNA TODO:
             /*
              val channelId: String = call.argument<String>("channelId")!!
@@ -908,19 +1041,23 @@ extension ChannelManager : TCHChannelDelegate {
     
     func chatClient(_ client: TwilioChatClient, channel: TCHChannel, messageAdded message: TCHMessage) {
         print("[Maubic - FlutterTwilioChat] TCHChannelDelegate: messageAdded")
-        let channelData = self.plugin?.toNSDictionary(channel: channel)
-        channel.messages?.getLastWithCount(1, completion: { (result, messages) in
-            if result.isSuccessful() {
-                let data : NSDictionary = [
-                    "event" : "NewMessage",
-                    "message" : self.plugin?.toNSDictionary(message: messages![0], channelSid: channel.sid!) as Any,
-                    "channel" : channelData as Any
-                ]
-                self.plugin?.sendDataToFlutter(data: data)
-            } else {
-                print("[Maubic - FlutterTwilioChat]: TCHChannelDelegate messageAdded ERROR - " + result.error.debugDescription)
+        self.plugin?.toNSDictionaryWithCompletion(channel: channel, userCompletionHandler: { (channelData) in
+            if (channelData != nil) {
+                channel.messages?.getLastWithCount(1, completion: { (result, messages) in
+                    if result.isSuccessful() {
+                        let data : NSDictionary = [
+                            "event" : "NewMessage",
+                            "message" : self.plugin?.toNSDictionary(message: messages![0], channelSid: channel.sid!) as Any,
+                            "channel" : channelData as Any
+                        ]
+                        self.plugin?.sendDataToFlutter(data: data)
+                    } else {
+                        print("[Maubic - FlutterTwilioChat]: TCHChannelDelegate messageAdded ERROR - " + result.error.debugDescription)
+                    }
+                })
             }
         })
+        
         
     }
  
@@ -928,12 +1065,15 @@ extension ChannelManager : TCHChannelDelegate {
         print("[Maubic - FlutterTwilioChat] TCHChannelDelegate: channel Updated")
         if (updated == TCHChannelUpdate.lastConsumedMessageIndex) {
             print("[Maubic - FlutterTwilioChat] TCHChannelDelegate: lastConsumedMessageIndex")
-            let channelData = self.plugin?.toNSDictionary(channel: channel)
-            let data : NSDictionary = [
-                "event" : "ChannelUpdated",
-                "channel" : channelData as Any
-            ]
-            self.plugin?.sendDataToFlutter(data: data)
+            self.plugin?.toNSDictionaryWithCompletion(channel: channel, userCompletionHandler: { (channelData) in
+                if (channelData != nil) {
+                    let data : NSDictionary = [
+                        "event" : "ChannelUpdated",
+                        "channel" : channelData as Any
+                    ]
+                    self.plugin?.sendDataToFlutter(data: data)
+                }
+            })
         }
     }
     
@@ -962,15 +1102,10 @@ extension ChannelManager : TCHChannelDelegate {
                     channel: TCHChannel,
                     synchronizationStatusUpdated status: TCHChannelSynchronizationStatus) {
         print("[Maubic - FlutterTwilioChat] TCHChannelDelegate: synchronizationStatusUpdated ")
-        /*
+        
         if status == .all {
-            loadMessages()
-            DispatchQueue.main.async {
-                self.tableView?.reloadData()
-                self.setViewOnHold(onHold: false)
-            }
+             print("[Maubic - FlutterTwilioChat] TCHChannelDelegate: synchronizationStatusUpdated - Status .all")
         }
-        */
     }
 }
 
@@ -1007,15 +1142,17 @@ extension ChannelManager : TwilioChatClientDelegate {
                 print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: added channel  \(channel.friendlyName ?? "NO_CHAN")")
                 self.sortChannels()
             }
-            
-        let channelData = self.plugin?.toNSDictionary(channel: channel)
-            
-        let data : NSDictionary = [
-            "event" : "ChannelJoined",
-            "channel"  : channelData as Any
-        ]
-            
-        self.plugin?.sendDataToFlutter(data: data)
+        
+            self.plugin?.toNSDictionaryWithCompletion(channel: channel, userCompletionHandler: { (channelData) in
+                if (channelData != nil) {
+                    let data : NSDictionary = [
+                        "event" : "ChannelJoined",
+                        "channel"  : channelData as Any
+                    ]
+                        
+                    self.plugin?.sendDataToFlutter(data: data)                }
+            })
+                   
         
 // SNA
 //            self.delegate?.chatClient(client, channelAdded: channel)
@@ -1048,10 +1185,14 @@ extension ChannelManager : TwilioChatClientDelegate {
             print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: chatClient 4 TCHClientSynchronizationStatus.completed")
             UIApplication.shared.isNetworkActivityIndicatorVisible = false
             // Ya podemos responder a Initialize.
+            /*
             ChannelManager.sharedManager.synchronizationGroup.leave()
             ChannelManager.sharedManager.channelsList = client.channelsList()
             ChannelManager.sharedManager.populateChannels()
-            
+            */
+            self.synchronizationGroup.leave()
+            self.channelsList = client.channelsList()
+            self.populateChannels()
 
             //ChannelManager.sharedManager.synchronizationGroup.leave()
 
