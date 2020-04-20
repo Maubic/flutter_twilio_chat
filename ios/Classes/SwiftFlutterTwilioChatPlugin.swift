@@ -589,7 +589,7 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
                                 if (channelData != nil) {
                                     let data : NSDictionary = [
                                         "event" : "ChannelJoined",
-                                        "data"  : channelData as Any
+                                        "channel"  : channelData as Any
                                     ]
                                         
                                     self.sendDataToFlutter(data: data)
