@@ -110,6 +110,22 @@ class FlutterTwilioChat {
     });
   }
 
+  Future<List<TwilioMessage>> recoverMessages({
+    @required String channelId,
+    @required int firstIndex,
+  }) async {
+    try {
+      final List<dynamic> result =
+          await _methodChannel.invokeMethod('recoverMessages', {
+        'channelId': channelId,
+        'firstIndex': firstIndex,
+      });
+      return result.map<TwilioMessage>(TwilioMessage.fromData).toList();
+    } catch (err) {
+      print('Error: $err');
+    }
+  }
+
   Stream<TwilioEvent> events() {
     return this.stream.map<TwilioEvent>(TwilioEvent.fromData);
   }

@@ -332,6 +332,37 @@ public class FlutterTwilioChatPlugin
           result.error("UpdateTokenError", errorInfo.getMessage(), null)
         }
       })
+    } else if (call.method == "recoverMessages") {
+      val channelId: String = call.argument<String>("channelId")!!
+      val firstIndex: Long = call.argument<Long>("firstIndex")!!
+      this.chatClient?.channels?.getChannel(
+        channelId,
+        object: CallbackListener<Channel>() {
+          override fun onSuccess(channel: Channel) {
+            println("Recovered channel")
+            channel.whenSynchronized({
+              channel.getMessages().getMessagesBefore(
+                firstIndex,
+                50,
+                object: CallbackListener<List<Message>>() {
+                  override fun onSuccess(messages: List<Message>) {
+                    val messageData: List<Map<String, Any?>> = messages.map(::serializeMessage)
+                    result.success(messageData)
+                  }
+                  override fun onError(errorInfo: ErrorInfo) {
+                    println("Error in getMessagesBefore: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+                    result.error("RecoverMessagesError", errorInfo.getMessage(), null)
+                  }
+                }
+              )
+            })
+          }
+          override fun onError(errorInfo: ErrorInfo) {
+            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            result.error("RecoverMessagesError", errorInfo.getMessage(), null)
+          }
+        }
+      )
     } else {
       result.notImplemented()
     }
