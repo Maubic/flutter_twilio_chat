@@ -126,7 +126,7 @@ public class SwiftFlutterTwilioChatPlugin: NSObject, FlutterPlugin, FlutterStrea
             }
             
             // Espera a que se haya completado la sincronización. ChannelManager - synchronizationStatusUpdated
-            self?.delegate?.synchronizationGroup.notify(queue: DispatchQueue.main) {
+            self?.delegate?.synchronizationGroup?.notify(queue: DispatchQueue.main) {
                 chatClient?.channelsList()?.userChannelDescriptors(completion: { (res, paginator) in
                     if (res.isSuccessful()) {
                         self!.traceLevel(depth: "2", val: &level, inc: true)
@@ -881,13 +881,13 @@ class ChannelManager: NSObject {
     var channels:NSMutableOrderedSet?
     var generalChannel:TCHChannel!
     var plugin: SwiftFlutterTwilioChatPlugin?
-    var synchronizationGroup:DispatchGroup
+    var synchronizationGroup:DispatchGroup?
     
     
     override init() {
         print("[Maubic - FlutterTwilioChat] Initializing ChannelManager")
         self.synchronizationGroup = DispatchGroup()
-        self.synchronizationGroup.enter()
+        self.synchronizationGroup?.enter()
         super.init()
         channels = NSMutableOrderedSet()
     }
@@ -1178,19 +1178,23 @@ extension ChannelManager : TwilioChatClientDelegate {
         }
       
     }
-    
+
     func chatClient(_ client: TwilioChatClient, synchronizationStatusUpdated status: TCHClientSynchronizationStatus) {
         print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: chatClient 4 - status \(status)")
         if status == TCHClientSynchronizationStatus.completed {
             print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: chatClient 4 TCHClientSynchronizationStatus.completed")
             UIApplication.shared.isNetworkActivityIndicatorVisible = false
+            var res = 20
+            
+            // Esperamos a que synchronizationGroup esté inicializado.
+            while ((self.synchronizationGroup == nil) && (res > 0)) {
+                print("[Maubic] \(res)")
+                Thread.sleep(forTimeInterval: 0.2)
+                res=res-1
+            }
+            
             // Ya podemos responder a Initialize.
-            /*
-            ChannelManager.sharedManager.synchronizationGroup.leave()
-            ChannelManager.sharedManager.channelsList = client.channelsList()
-            ChannelManager.sharedManager.populateChannels()
-            */
-            self.synchronizationGroup.leave()
+            self.synchronizationGroup!.leave()
             self.channelsList = client.channelsList()
             self.populateChannels()
 
@@ -1198,7 +1202,7 @@ extension ChannelManager : TwilioChatClientDelegate {
 
             // SNA: Conectarse a todos los canales.
             loadGeneralChatRoomWithCompletion { success, error in
-                print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: chatClient 4 - loadGeneralChatRoomWithCompletion \(success)")
+                print("[Maubic - FlutterTwilioChat] \(res) TwilioChatClientDelegate: chatClient 4 - loadGeneralChatRoomWithCompletion \(success)")
                 if success {
                     print("[Maubic - FlutterTwilioChat] TwilioChatClientDelegate: chatClient 4 - loadGeneralChatRoomWithCompletion SUCCESSFUL ")
                     // SNA: TODO Something here after success
