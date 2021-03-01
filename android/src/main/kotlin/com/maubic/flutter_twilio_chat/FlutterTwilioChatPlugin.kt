@@ -59,12 +59,7 @@ public class FlutterTwilioChatPlugin
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
-  }
-
-  // TODO
-  override fun onConversationSynchronizationChange(conversation: Conversation) {
-    
-  }
+  }  
 
   // This static function is optional and equivalent to onAttachedToEngine. It supports the old
   // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
@@ -107,7 +102,7 @@ public class FlutterTwilioChatPlugin
     } else if (call.method == "initialize") {
       val token: String = call.argument<String>("token")!!
       //val region: String = call.argument<String>("region") ?: "de1"
-      val properties: ConversationsClient.Properties = ConversationsClient.Properties.Builder()
+      val properties: ConversationsClient.Properties = ConversationsClient.Properties.newBuilder()
         // This errors out?
         //.setRegion(region)
         .createProperties()
@@ -118,40 +113,43 @@ public class FlutterTwilioChatPlugin
         this.context!!,
         token,
         properties,
-        object: CallbackListener<ConversationsClient>() {
+        object: CallbackListener<ConversationsClient> {
           override fun onSuccess(client: ConversationsClient) {
             println("Success")
-            client.setListener(plugin)
+            client.addListener(plugin)
             plugin.conversationsClient = client
 
-            client.getChannels().getUserChannelsList(object: CallbackListener<Paginator<ChannelDescriptor>>() {
-              override fun onSuccess(paginator: Paginator<ChannelDescriptor>) {
-                paginator.getAll(
-                  { channels: List<ChannelDescriptor> ->
-                    val channelData: List<Map<String, Any>> = channels.map(::serializeChannelDescriptor)
-                    getAllLastMessages(channels, { messages: List<Message> ->
-                      println("Received messages")
-                      val messageData: List<Map<String, Any?>> = messages.map(::serializeMessage)
-                      result.success(mapOf(
-                        "channels" to channelData,
-                        "messages" to messageData
-                      ))
-                    }, { errorInfo: ErrorInfo ->
-                      println("Error in getAllLastMessages: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                      result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
-                    })
-                  },
-                  { errorInfo: ErrorInfo ->
-                    println("Error in getAll: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                    result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
-                  }
-                )
-              }
-              override fun onError(errorInfo: ErrorInfo) {
-                println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
-              }
-            })
+            val myConversations:List<Conversation> = client.getMyConversations();
+            println("Length ${myConversations}");
+
+            // client.getChannels().getUserChannelsList(object: CallbackListener<Paginator<ChannelDescriptor>>() {
+            //   override fun onSuccess(paginator: Paginator<ChannelDescriptor>) {
+            //     paginator.getAll(
+            //       { channels: List<ChannelDescriptor> ->
+            //         val channelData: List<Map<String, Any>> = channels.map(::serializeChannelDescriptor)
+            //         getAllLastMessages(channels, { messages: List<Message> ->
+            //           println("Received messages")
+            //           val messageData: List<Map<String, Any?>> = messages.map(::serializeMessage)
+            //           result.success(mapOf(
+            //             "channels" to channelData,
+            //             "messages" to messageData
+            //           ))
+            //         }, { errorInfo: ErrorInfo ->
+            //           println("Error in getAllLastMessages: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            //           result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
+            //         })
+            //       },
+            //       { errorInfo: ErrorInfo ->
+            //         println("Error in getAll: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            //         result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
+            //       }
+            //     )
+            //   }
+            //   override fun onError(errorInfo: ErrorInfo) {
+            //     println("Error: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+            //     result.error("ConversationsClientCreateError", errorInfo.getMessage(), null)
+            //   }
+            // })
 
             //result.success(null)
           }
@@ -168,13 +166,13 @@ public class FlutterTwilioChatPlugin
 
       this.conversationsClient?.getConversation(
         channelId,
-        object: CallbackListener<Channel>() {
-          override fun onSuccess(channel: Conversation) {
-            println("Recovered channel")
-            channel.whenSynchronized({
-              channel.getMessages().sendMessage(
+        object: CallbackListener<Conversation> {
+          override fun onSuccess(conversation: Conversation) {
+            println("Recovered conversation")
+            conversation.whenSynchronized({
+              conversation.sendMessage(
                 Message.options().withBody(messageText),
-                object: CallbackListener<Message>() {
+                object: CallbackListener<Message> {
                   override fun onSuccess(message: Message) {
                     println("Sent message")
                     result.success(null)
@@ -200,13 +198,13 @@ public class FlutterTwilioChatPlugin
 
       this.conversationsClient?.getConversation(
         channelId,
-        object: CallbackListener<Channel>() {
+        object: CallbackListener<Conversation> {
           override fun onSuccess(channel: Conversation) {
             println("Recovered channel")
             channel.whenSynchronized({
-              channel.getMessages().sendMessage(
+              channel.sendMessage(
                 Message.options().withMedia(attachmentData.inputStream(), type),
-                object: CallbackListener<Message>() {
+                object: CallbackListener<Message> {
                   override fun onSuccess(message: Message) {
                     println("Sent message")
                     result.success(null)
@@ -229,7 +227,7 @@ public class FlutterTwilioChatPlugin
       val channelId: String = call.argument<String>("channelId")!!
       this.conversationsClient?.getConversation(
         channelId,
-        object: CallbackListener<Channel>() {
+        object: CallbackListener<Conversation> {
           override fun onSuccess(channel: Conversation) {
             println("Recovered channel")
             channel.whenSynchronized({
@@ -246,8 +244,8 @@ public class FlutterTwilioChatPlugin
                   println("Error in serializeChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
                 }
               )
-              channel.getMessages().setAllMessagesConsumedWithResult(
-                object: CallbackListener<Long>() {
+              channel.setAllMessagesRead(
+                object: CallbackListener<Long> {
                   override fun onSuccess(index: Long) {
                     result.success(null)
                   }
@@ -266,65 +264,65 @@ public class FlutterTwilioChatPlugin
         }
       )
     // getAttachment: UNUSED
-    } else if (call.method == "getAttachment") {
-      val channelId: String = call.argument<String>("channelId")!!
-      val index: Long = call.argument<Long>("index")!!
-      this.ConversationsClient?.channels?.getChannel(
-        channelId,
-        object: CallbackListener<Channel>() {
-          override fun onSuccess(channel: Conversation) {
-            println("Recovered channel")
-            channel.whenSynchronized({
-              channel.getMessages().getMessageByIndex(
-                index,
-                object: CallbackListener<Message>() {
-                  override fun onSuccess(message: Message) {
-                    if (!message.hasMedia()) {
-                      result.error("GetAttachmentError", "Message does not have media", null)
-                    } else {
-                      val media: Media = message.getMedia()
-                      val size: Long = media.getSize()
-                      val outputStream: ByteArrayOutputStream = ByteArrayOutputStream(size.toInt())
-                      media.download(
-                        outputStream,
-                        object: StatusListener() {
-                          override fun onSuccess() {
-                            println("Downloaded media")
-                            result.success(outputStream.toByteArray())
-                          }
-                          override fun onError(errorInfo: ErrorInfo) {
-                            println("Error in download: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                            result.error("GetAttachmentError", errorInfo.getMessage(), null)
-                          }
-                        },
-                        object: ProgressListener() {
-                          override fun onStarted() {
-                            println("Media download onStarted")
-                          }
-                          override fun onProgress(bytes: Long) {
-                            println("Media download onProgress: ${bytes}")
-                          }
-                          override fun onCompleted(mediaSid: String) {
-                            println("Media download onCompleted: ${mediaSid}")
-                          }
-                        }
-                      )
-                    }
-                  }
-                  override fun onError(errorInfo: ErrorInfo) {
-                    println("Error in getMessageByIndex: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-                    result.error("GetAttachmentError", errorInfo.getMessage(), null)
-                  }
-                }
-              )
-            })
-          }
-          override fun onError(errorInfo: ErrorInfo) {
-            println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
-            result.error("GetAttachmentError", errorInfo.getMessage(), null)
-          }
-        }
-      )
+    // } else if (call.method == "getAttachment") {
+    //   val channelId: String = call.argument<String>("channelId")!!
+    //   val index: Long = call.argument<Long>("index")!!
+    //   this.conversationsClient?.getConversation(
+    //     channelId,
+    //     object: CallbackListener<Conversation> {
+    //       override fun onSuccess(channel: Conversation) {
+    //         println("Recovered channel")
+    //         channel.whenSynchronized({
+    //           channel.getMessageByIndex(
+    //             index,
+    //             object: CallbackListener<Message> {
+    //               override fun onSuccess(message: Message) {
+    //                 if (!message.hasMedia()) {
+    //                   result.error("GetAttachmentError", "Message does not have media", null)
+    //                 } else {
+    //                   val media: Media = message.getMedia()
+    //                   val size: Long = media.getSize()
+    //                   val outputStream: ByteArrayOutputStream = ByteArrayOutputStream(size.toInt())
+    //                   media.download(
+    //                     outputStream,
+    //                     object: StatusListener {
+    //                       override fun onSuccess() {
+    //                         println("Downloaded media")
+    //                         result.success(outputStream.toByteArray())
+    //                       }
+    //                       override fun onError(errorInfo: ErrorInfo) {
+    //                         println("Error in download: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+    //                         result.error("GetAttachmentError", errorInfo.getMessage(), null)
+    //                       }
+    //                     },
+    //                     object: ProgressListener {
+    //                       override fun onStarted() {
+    //                         println("Media download onStarted")
+    //                       }
+    //                       override fun onProgress(bytes: Long) {
+    //                         println("Media download onProgress: ${bytes}")
+    //                       }
+    //                       override fun onCompleted(mediaSid: String) {
+    //                         println("Media download onCompleted: ${mediaSid}")
+    //                       }
+    //                     }
+    //                   )
+    //                 }
+    //               }
+    //               override fun onError(errorInfo: ErrorInfo) {
+    //                 println("Error in getMessageByIndex: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+    //                 result.error("GetAttachmentError", errorInfo.getMessage(), null)
+    //               }
+    //             }
+    //           )
+    //         })
+    //       }
+    //       override fun onError(errorInfo: ErrorInfo) {
+    //         println("Error in getChannel: ${errorInfo.getStatus()} ${errorInfo.getCode()} ${errorInfo.getMessage()}")
+    //         result.error("GetAttachmentError", errorInfo.getMessage(), null)
+    //       }
+    //     }
+    //   )
     } else if (call.method == "updateToken") {
       val token: String = call.argument<String>("token")!!
       this.conversationsClient?.updateToken(token, object: StatusListener {
@@ -342,14 +340,14 @@ public class FlutterTwilioChatPlugin
       val firstIndex: Long = call.argument<Long>("firstIndex")!!
       this.conversationsClient?.getConversation(
         channelId,
-        object: CallbackListener<Channel>() {
+        object: CallbackListener<Conversation> {
           override fun onSuccess(channel: Conversation) {
             println("Recovered channel")
             channel.whenSynchronized({
-              channel.getMessages().getMessagesBefore(
+              channel.getMessagesBefore(
                 firstIndex,
                 50,
-                object: CallbackListener<List<Message>>() {
+                object: CallbackListener<List<Message>> {
                   override fun onSuccess(messages: List<Message>) {
                     val messageData: List<Map<String, Any?>> = messages.map(::serializeMessage)
                     result.success(messageData)
@@ -374,12 +372,12 @@ public class FlutterTwilioChatPlugin
   }
 
   // Twilio callbacks
-  override fun onChannelJoined(channel: Conversation?) {
-    println("onChannelJoined")
-    if (channel != null) {
-      channel.whenSynchronized({
+  override fun onConversationAdded(conversation: Conversation?){
+    println("onConversationAdded")
+    if (conversation != null) {
+      conversation.whenSynchronized({
         serializeChannel(
-          channel,
+          conversation,
           { channelData: Map<String, Any> ->
             eventSink?.success(mapOf(
               "event" to "ChannelJoined",
@@ -393,21 +391,15 @@ public class FlutterTwilioChatPlugin
       })
     }
   }
-  override fun onChannelInvited(channel: Conversation?) {
-    println("onChannelInvited")
-  }
-  override fun onChannelAdded(channel: Conversation?) {
-    println("onChannelAdded")
-  }
-  override fun onChannelUpdated(channel: Conversation, reason: Conversation.UpdateReason?) {
-    println("onChannelUpdated")
+  override fun onConversationUpdated(conversation: Conversation, reason: Conversation.UpdateReason?) {
+    println("onConversationUpdated")
     if (reason == Conversation.UpdateReason.LAST_MESSAGE) {
       println("Last message changed")
-      channel.whenSynchronized({
+      conversation.whenSynchronized({
         serializeChannel(
-          channel,
+          conversation,
           { channelData: Map<String, Any> ->
-            channel.getMessages().getLastMessages(1, object: CallbackListener<List<Message>>() {
+            conversation.getLastMessages(1, object: CallbackListener<List<Message>> {
               override fun onSuccess(messages: List<Message>) {
                 println("Message retrieved")
                 val message = messages[0]
@@ -427,11 +419,11 @@ public class FlutterTwilioChatPlugin
           }
         )
       })
-    } else if (reason == Conversation.UpdateReason.LAST_CONSUMED_MESSAGE_INDEX) {
+    } else if (reason == Conversation.UpdateReason.LAST_READ_MESSAGE_INDEX) {
       println("Last consumed message changed")
-      channel.whenSynchronized({
+      conversation.whenSynchronized({
         serializeChannel(
-          channel,
+          conversation,
           { channelData: Map<String, Any> ->
             eventSink?.success(mapOf(
               "event" to "ChannelUpdated",
@@ -445,11 +437,10 @@ public class FlutterTwilioChatPlugin
       })
     }
   }
-  override fun onChannelDeleted(channel: Conversation?) {
-    println("onChannelDeleted")
+  override fun onConversationDeleted(channel: Conversation?) {
+    println("onConversationDeleted")
   }
-  override fun onChannelSynchronizationChange(channel: Conversation?) {
-    println("onChannelSynchronizationChange")
+  override fun onConversationSynchronizationChange(channel: Conversation?) {
   }
   override fun onError(errorInfo: ErrorInfo?) {
     println("onError")
@@ -484,14 +475,11 @@ public class FlutterTwilioChatPlugin
   override fun onNewMessageNotification(channelSid: String?, messageSid: String?, messageIndex: Long) {
     println("onNewMessageNotification")
   }
-  override fun onAddedToChannelNotification(channelSid: String?) {
-    println("onAddedToChannelNotification")
+  override fun onAddedToConversationNotification(channelSid: String?) {
+    println("onAddedToConversationNotification")
   }
-  override fun onInvitedToChannelNotification(channelSid: String?) {
-    println("onInvitedToChannelNotification")
-  }
-  override fun onRemovedFromChannelNotification(channelSid: String?) {
-    println("onRemovedFromChannelNotification")
+  override fun onRemovedFromConversationNotification(channelSid: String?) {
+    println("onRemovedFromConversationNotification")
   }
   override fun onNotificationSubscribed() {
     println("onNotificationSubscribed")
@@ -501,87 +489,16 @@ public class FlutterTwilioChatPlugin
   }
 }
 
-// Helper functions
-fun <T> Paginator<T>.getAll(
-  onSuccess: (items: List<T>) -> Unit,
-  onError: (error: ErrorInfo) -> Unit
-) {
-  this.getAllPlus(listOf(), onSuccess, onError)
-}
-
-fun <T> Paginator<T>.getAllPlus(
-  items: List<T>,
-  onSuccess: (items: List<T>) -> Unit,
-  onError: (error: ErrorInfo) -> Unit
-) {
-  val paginatorItems = this.getItems()
-  if (this.hasNextPage()) {
-    this.requestNextPage(object: CallbackListener<Paginator<T>>() {
-      override fun onSuccess (res: Paginator<T>) {
-        val addedItems: List<T> = items.plus(paginatorItems)
-        res.getAllPlus(addedItems, onSuccess, onError)
-      }
-      override fun onError (err: ErrorInfo) {
-        onError(err)
-      }
-    })
-  } else {
-    onSuccess(items.plus(paginatorItems))
-  }
-}
-
-fun getAllLastMessages(
-  channels: List<ChannelDescriptor>,
-  onSuccess: (messages: List<Message>) -> Unit,
-  onError: (error: ErrorInfo) -> Unit
-) {
-  getAllLastMessagesPlus(listOf(), channels, onSuccess, onError)
-}
-
-fun getAllLastMessagesPlus(
-  plusMessages: List<Message>,
-  channels: List<ChannelDescriptor>,
-  onSuccess: (messages: List<Message>) -> Unit,
-  onError: (error: ErrorInfo) -> Unit
-) {
-  if (channels.isEmpty()) {
-    onSuccess(plusMessages)
-  } else {
-    val channelDescriptor: ConversationDescriptor = channels[0]
-    channelDescriptor.getChannel(object: CallbackListener<Channel>() {
-      override fun onSuccess (channel: Conversation) {
-        channel.whenSynchronized({
-          channel.getMessages().getLastMessages(50, object: CallbackListener<List<Message>>() {
-            override fun onSuccess (messages: List<Message>) {
-              getAllLastMessagesPlus(
-                plusMessages.plus(messages),
-                channels.drop(1),
-                onSuccess,
-                onError
-              )
-            }
-            override fun onError (errorInfo: ErrorInfo) {
-              onError(errorInfo)
-            }
-          })
-        })
-      }
-      override fun onError (err: ErrorInfo) {
-        onError(err)
-      }
-    })
-  }
-}
 
 fun Conversation.whenSynchronized(
   onSuccess: () -> Unit
 ) {
-  if (this.getSynchronizationStatus().isAtLeast(Channel.SynchronizationStatus.ALL)) {
+  if (this.getSynchronizationStatus().isAtLeast(Conversation.SynchronizationStatus.ALL)) {
     onSuccess()
   } else {
     this.addListener(object: ConversationListener {
       override fun onSynchronizationChanged(channel: Conversation) {
-        if (channel.getSynchronizationStatus().isAtLeast(Channel.SynchronizationStatus.ALL)) {
+        if (channel.getSynchronizationStatus().isAtLeast(Conversation.SynchronizationStatus.ALL)) {
           channel.removeAllListeners()
           onSuccess()
         }
@@ -590,29 +507,29 @@ fun Conversation.whenSynchronized(
       override fun onMessageAdded(message: Message) {}
       override fun onMessageUpdated(message: Message, reason: Message.UpdateReason) {}
       override fun onMessageDeleted(message: Message) {}
-      override fun onMemberAdded(member: Participant) {}
-      override fun onMemberUpdated(member: Participant, reason: Participant.UpdateReason) {}
-      override fun onMemberDeleted(member: Participant) {}
+      override fun onParticipantAdded(member: Participant) {}
+      override fun onParticipantUpdated(member: Participant, reason: Participant.UpdateReason) {}
+      override fun onParticipantDeleted(member: Participant) {}
       override fun onTypingStarted(channel: Conversation, member: Participant) {}
       override fun onTypingEnded(channel: Conversation, member: Participant) {}
     })
   }
 }
 
-fun serializeChannelDescriptor(channel: ConversationDescriptor): Map<String, Any> {
-  return mapOf(
-    "sid" to channel.getSid(),
-    "uniqueName" to channel.getUniqueName(),
-    "friendlyName" to channel.getFriendlyName(),
-    "attributes" to serializeAttributes(channel.getAttributes()),
-    "createdBy" to channel.getCreatedBy(),
-    "unconsumedCount" to channel.getUnconsumedMessagesCount(),
-    "dateUpdated" to channel.getDateUpdated().getTime()
-  )
-}
+// fun serializeChannelDescriptor(channel: ConversationDescriptor): Map<String, Any> {
+//   return mapOf(
+//     "sid" to channel.getSid(),
+//     "uniqueName" to channel.getUniqueName(),
+//     "friendlyName" to channel.getFriendlyName(),
+//     "attributes" to serializeAttributes(channel.getAttributes()),
+//     "createdBy" to channel.getCreatedBy(),
+//     "unconsumedCount" to channel.getUnconsumedMessagesCount(),
+//     "dateUpdated" to channel.getDateUpdated().getTime()
+//   )
+// }
 
 fun serializeChannel(channel: Conversation, onSuccess: (channelData: Map<String, Any>) -> Unit, onError: (errorInfo: ErrorInfo) -> Unit) {
-  channel.getUnconsumedMessagesCount(object: CallbackListener<Long>() {
+  channel.getUnreadMessagesCount(object: CallbackListener<Long> {
     override fun onSuccess(count: Long) {
       onSuccess(mapOf(
         "sid" to channel.getSid(),
@@ -637,10 +554,10 @@ fun serializeMessage(message: Message): Map<String, Any?> {
     "attributes" to serializeAttributes(message.getAttributes()),
     "author" to message.getAuthor(),
     "dateCreated" to message.getDateCreated(),
-    "channelSid" to message.getChannelSid(),
+    "channelSid" to message.getConversationSid(),
     "hasMedia" to message.hasMedia(),
     "index" to message.getMessageIndex(),
-    "mediaSid" to message.getMedia()?.getSid()
+    "mediaSid" to message.getMediaSid()
   )
 }
 
