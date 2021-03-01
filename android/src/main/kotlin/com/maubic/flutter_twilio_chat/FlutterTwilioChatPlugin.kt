@@ -41,7 +41,7 @@ public class FlutterTwilioChatPlugin
   , ConversationsClientListener
 {
   private var eventSink: EventSink? = null
-  private var ConversationsClient: ConversationsClient? = null
+  private var conversationsClient: ConversationsClient? = null
   private var context: Context? = null
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -122,7 +122,7 @@ public class FlutterTwilioChatPlugin
           override fun onSuccess(client: ConversationsClient) {
             println("Success")
             client.setListener(plugin)
-            plugin.ConversationsClient = client
+            plugin.conversationsClient = client
 
             client.getChannels().getUserChannelsList(object: CallbackListener<Paginator<ChannelDescriptor>>() {
               override fun onSuccess(paginator: Paginator<ChannelDescriptor>) {
@@ -166,7 +166,7 @@ public class FlutterTwilioChatPlugin
       val messageText: String = call.argument<String>("messageText")!!
       println("sendSimpleMessage")
 
-      this.ConversationsClient?.channels?.getChannel(
+      this.conversationsClient?.getConversation(
         channelId,
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Conversation) {
@@ -198,7 +198,7 @@ public class FlutterTwilioChatPlugin
       val attachmentData: ByteArray = call.argument<ByteArray>("attachmentData")!!
       val type: String = call.argument<String>("type")!!
 
-      this.ConversationsClient?.channels?.getChannel(
+      this.conversationsClient?.getConversation(
         channelId,
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Conversation) {
@@ -227,7 +227,7 @@ public class FlutterTwilioChatPlugin
       )
     } else if (call.method == "markAsRead") {
       val channelId: String = call.argument<String>("channelId")!!
-      this.ConversationsClient?.channels?.getChannel(
+      this.conversationsClient?.getConversation(
         channelId,
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Conversation) {
@@ -327,7 +327,7 @@ public class FlutterTwilioChatPlugin
       )
     } else if (call.method == "updateToken") {
       val token: String = call.argument<String>("token")!!
-      this.ConversationsClient?.updateToken(token, object: StatusListener() {
+      this.conversationsClient?.updateToken(token, object: StatusListener {
         override fun onSuccess() {
           println("Token updated")
           result.success(null)
@@ -340,7 +340,7 @@ public class FlutterTwilioChatPlugin
     } else if (call.method == "recoverMessages") {
       val channelId: String = call.argument<String>("channelId")!!
       val firstIndex: Long = call.argument<Long>("firstIndex")!!
-      this.ConversationsClient?.channels?.getChannel(
+      this.conversationsClient?.getConversation(
         channelId,
         object: CallbackListener<Channel>() {
           override fun onSuccess(channel: Conversation) {
